@@ -40,6 +40,16 @@ contextBridge.exposeInMainWorld('taskAPI', {
   openFile: () => ipcRenderer.invoke('dialog:openFile'),
   saveFile: () => ipcRenderer.invoke('dialog:saveFile'),
 
+  // NEW FEATURE 1 - Priority filter
+  onFilter: (callback) => {
+// Pass only the priority text to the renderer's function
+    const handler = (_event, priority) => callback(priority);
+// Start listening for 'tasks:filter' messages from main
+    ipcRenderer.on('tasks:filter', handler);
+// Return a function that stops listening (same as onTasksUpdated)
+    return () => ipcRenderer.removeListener('tasks:filter', handler);
+  },
+
 });
 
 console.log('[preload] Main window — taskAPI exposed via contextBridge.');

@@ -269,6 +269,13 @@ function createEditWindow(taskId) {
   editWindow.on('closed', () => { editWindow = null; });
 }
 
+// NEW FEATURE 1 - Priority filter click handler
+function onPriorityFilterClick(menuItem) {
+  if (mainWindow) {
+    mainWindow.webContents.send('tasks:filter', menuItem.label);
+  }
+}
+
 // ── App menu ──────────────────────────────────────────────────────────────────
 function buildMenu() {
   const template = [
@@ -329,6 +336,19 @@ function buildMenu() {
         { role: 'resetZoom' },
         { role: 'zoomIn' },
         { role: 'zoomOut' },
+        // NEW FEATURE 1 line separating the filter from the zoom items
+        {type: 'separator'},
+        {
+       label: 'Filter by Priority',
+          submenu: [
+            // 'radio' = only one can be selected; All starts checked.
+            // All four share the same click handler from step 1a.
+            { label: 'All',    type: 'radio', checked: true, click: onPriorityFilterClick },
+            { label: 'High',   type: 'radio',                 click: onPriorityFilterClick },
+            { label: 'Medium', type: 'radio',                 click: onPriorityFilterClick },
+            { label: 'Low',    type: 'radio',                 click: onPriorityFilterClick },
+          ],
+        },
       ],
     },
   ];

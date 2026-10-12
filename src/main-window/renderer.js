@@ -15,6 +15,8 @@ console.log('Main window renderer loaded')
 const tasks = []
 
 let activeFilter = 'all';
+// NEW FEATURE 1
+let priorityFilter = 'All';
 
 // ── Render helpers ────────────────────────────────────────────────────────────
 
@@ -22,19 +24,25 @@ const PRIORITY_CLASS = { High: 'priority-high', Medium: 'priority-medium', Low: 
 const STATUS_CLASS   = { 'To Do': 'status-todo', 'In Progress': 'status-progress', Done: 'status-done' };
 
 function renderTasks() {
-  const visible = activeFilter === 'all'
-    ? tasks
-    : tasks.filter(t => t.status === activeFilter);
+  // Keep a task only if it matches BOTH the status button and the priority menu.
+  const visible = tasks.filter(t =>
+    (activeFilter === 'all' || t.status === activeFilter) &&
+    (priorityFilter === 'All' || t.priority === priorityFilter)
+  );
 
+  // Remove all cards currently on screen.
   taskList.innerHTML = '';
 
   if (visible.length === 0) {
+    // Nothing matches, so show the "No tasks here" message.
     emptyState.hidden = false;
   } else {
+    // Hide the message and draw one card per matching task.
     emptyState.hidden = true;
     visible.forEach(task => taskList.appendChild(createTaskCard(task)));
   }
 
+  // Footer shows the total number of tasks, not just the visible ones.
   taskCount.textContent = `${tasks.length} task${tasks.length === 1 ? '' : 's'}`;
 }
 
@@ -119,6 +127,12 @@ taskList.addEventListener('contextmenu', (e) => {
   const card = e.target.closest('.task-card');
   if (!card) return;
   window.taskAPI.showTaskContextMenu(Number(card.dataset.id), card.dataset.title);
+});
+
+// NEW FEATURE 1 - reaat to the VIEW menu choice
+window.taskAPI.onFilter((priority) => {
+  priorityFilter = priority;
+  renderTasks();
 });
 
 // ── IPC — listen for task list updates from main (same as v2) ────────────────
