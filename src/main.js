@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, ipcMain, Tray, nativeImage } = require('electron')
+const { app, BrowserWindow, Menu, dialog, ipcMain, Tray, nativeImage, Notification } = require('electron')
 const path = require('node:path');
 const fs   = require('node:fs');
 
@@ -112,17 +112,27 @@ ipcMain.handle('tasks:delete', async (_event, taskId) => {
 // The order statuses move through then loop back to the start
 const STATUS_ORDER = ['To Do', 'In Progress', 'Done'];
 
-// Runs when the renderer calls window.taskAPI.cycleStatus(id)
+// Runs when the renderer calls window.taskAPI.cycleStatus(id).
 ipcMain.handle('tasks:cycleStatus', (_event, taskId) => {
+  // Find the task with this id.
   const task = tasks.find(t => t.id === taskId);
+  // If it no longer exists, do nothing.
   if (!task) return null;
 
-// Position of the next status
-const nextIndex = (STATUS_ORDER.indexOf(task.status) + 1) % STATUS_ORDER.length;
-task.status = STATUS_ORDER[nextIndex];
+  // Position of the next status; the % wraps Done back around to To Do.
+  const nextIndex = (STATUS_ORDER.indexOf(task.status) + 1) % STATUS_ORDER.length;
+  // Set the new status.
+  task.status = STATUS_ORDER[nextIndex];
 
-pushTasksToRenderer();
-return task;
+  // NEW Feature B only notify when the task has just become Done.
+  if (task.status === 'Done') {
+    // Show a native OS notification with the task's title.
+    new Notification({ title: 'Task complete', body: task.title }).show();
+  }
+
+  // Send the updated list to the renderer (this also updates the tray).
+  pushTasksToRenderer();
+  return task;
 });
 
 // NEW FEATURE 4 — Clear all tasks 
@@ -426,8 +436,24 @@ function getDialogParent() {
   return mainWindow && mainWindow.isVisible() ? mainWindow : null;
 }
 
-// Tray action: set every task's status to 'Done'.
-function markAllDone() {
+//Bonus A confirm on mark all done
+// Tray action: confirm first, then set every task's status to 'Done'.
+async function markAllDone() {
+  // Show the confirmation popup and wait for the user's answer.
+  const result = await dialog.showMessageBox(getDialogParent(), {
+    type:      'question',
+    title:     'Mark All Done',
+    message:   'Mark all tasks as Done?',
+    detail:    'Every task will be set to Done.',
+    buttons:   ['Mark All Done', 'Cancel'],
+    defaultId: 1,   // Enter key picks Cancel.
+    cancelId:  1,   // Esc key picks Cancel.
+  });
+
+  // Button 0 is 'Mark All Done'; anything else means stop.
+  if (result.response !== 0) return;
+
+  // Set every task's status to Done.
   tasks.forEach(t => { t.status = 'Done'; });
   // Push the change to the renderer (this also updates the tray).
   pushTasksToRenderer();
