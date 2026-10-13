@@ -26,6 +26,8 @@ let tray       = null;  // NEW in v3 — module-scope prevents the GC footgun - 
 
 // ── Helper: push current task list to the main window ─────────────────────────
 function pushTasksToRenderer() {
+  // NEW FEATURE 2 Refresh the tray tooltip and menu after every change
+  updateTray();
   if (mainWindow) {
     mainWindow.webContents.send('tasks:updated', tasks);
   }
@@ -371,15 +373,56 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-// ── NEW in v3 — Tray ──────────────────────────────────────────────────────────
-function createTray() {
-  // nativeImage.createFromPath — if the icon file doesn't exist Electron
-  // returns an empty image rather than crashing, so this is safe in dev.
-  const iconPath = path.join(app.getAppPath(), 'assets', 'icon.png');
-  const icon = nativeImage.createFromPath(iconPath);
+// NEW Feature 2 — Tray helpers / Note - Got stuck on several parts of this piece and did have to use AI for help.
 
-  tray = new Tray(icon);           // assigned to module-scope let (not const!)
-  tray.setToolTip('Task Manager');
+// Count the tasks whose status is not 'Done'.
+function countIncomplete() {
+  return tasks.filter(t => t.status !== 'Done').length;
+}
+
+// Use the main window as the dialog parent only if it is visible.
+function getDialogParent() {
+  return mainWindow && mainWindow.isVisible() ? mainWindow : null;
+}
+
+// Tray action: set every task's status to 'Done'.
+function markAllDone() {
+  tasks.forEach(t => { t.status = 'Done'; });
+  // Push the change to the renderer (this also updates the tray).
+  pushTasksToRenderer();
+}
+
+// Tray action: confirm first, then remove all 'Done' tasks.
+async function clearDoneTasks() {
+  const result = await dialog.showMessageBox(getDialogParent(), {
+    type:      'warning',
+    title:     'Clear Done Tasks',
+    message:   'Remove all completed tasks?',
+    detail:    'This action cannot be undone.',
+    buttons:   ['Clear Done', 'Cancel'],
+    defaultId: 1,   // Enter key picks Cancel.
+    cancelId:  1,   // Esc key picks Cancel.
+  });
+
+  // Button 0 is 'Clear Done'; anything else means stop.
+  if (result.response !== 0) return;
+
+  // Keep only the tasks that are not Done.
+  const remaining = tasks.filter(t => t.status !== 'Done');
+  // Swap the array contents in place (same array object, new contents).
+  tasks.splice(0, tasks.length, ...remaining);
+  pushTasksToRenderer();
+}
+
+// Refresh the tray tooltip and rebuild its right-click menu.
+function updateTray() {
+  // The tray does not exist yet during startup, so do nothing.
+  if (!tray) return;
+
+  const incomplete = countIncomplete();
+
+  // Tooltip shown when hovering over the tray icon.
+  tray.setToolTip(`Task Manager — ${incomplete} incomplete`);
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -387,11 +430,30 @@ function createTray() {
       click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } },
     },
     { type: 'separator' },
+    // Greyed out when every task is already Done.
+    { label: 'Mark All Done',    enabled: incomplete > 0,                       click: markAllDone },
+    // Greyed out when there are no Done tasks to remove.
+    { label: 'Clear Done Tasks', enabled: tasks.some(t => t.status === 'Done'), click: clearDoneTasks },
+    { type: 'separator' },
     { role: 'quit' },
   ]);
 
+  // Replace the old menu so it matches the current tasks.
   tray.setContextMenu(contextMenu);
+}
 
+function createTray() {
+  // Build the tray icon from the assets folder.
+  const iconPath = path.join(app.getAppPath(), 'assets', 'icon.png');
+  const icon = nativeImage.createFromPath(iconPath);
+
+  // Keep it in the module-level variable so it isn't garbage collected.
+  tray = new Tray(icon);
+
+  // Set the first tooltip and menu.
+  updateTray();
+
+  // Double-clicking the tray icon shows the main window.
   tray.on('double-click', () => {
     if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
   });
