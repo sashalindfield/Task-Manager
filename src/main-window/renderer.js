@@ -12,8 +12,6 @@ const filterBtns = document.querySelectorAll('.filter-btn');
 
 console.log('Main window renderer loaded')
 
-// Module-level task array — populated over IPC (same as v2)
-const tasks = []
 
 let activeFilter = 'all';
 // NEW FEATURE 1
@@ -26,7 +24,11 @@ const STATUS_CLASS   = { 'To Do': 'status-todo', 'In Progress': 'status-progress
 // NEW FEATURE 3 used only to label the button; main does the real change
 const NEXT_STATUS = { 'To Do': 'In Progress', 'In Progress': 'Done', Done: 'To Do' };
 
-function renderTasks() {
+// src/main-window/renderer.js
+async function renderTasks(list) {
+  // Use the list main just pushed, or ask main for the current one (?? = "if missing").
+  const tasks = list ?? await window.taskAPI.getTasks();
+
   // Keep a task only if it matches BOTH the status button and the priority menu.
   const visible = tasks.filter(t =>
     (activeFilter === 'all' || t.status === activeFilter) &&
@@ -147,16 +149,11 @@ window.taskAPI.onFilter((priority) => {
 
 // ── IPC — listen for task list updates from main (same as v2) ────────────────
 window.taskAPI.onTasksUpdated((updatedTasks) => {
-  tasks.splice(0, tasks.length, ...updatedTasks);
-  renderTasks();
+  renderTasks(updatedTasks);
 });
 
-// ── Load initial data (same as v2) ───────────────────────────────────────────
-(async () => {
-  const initialTasks = await window.taskAPI.getTasks();
-  tasks.splice(0, tasks.length, ...initialTasks);
-  renderTasks();
-  console.log('[renderer] Initial tasks loaded via IPC:', tasks.length);
-})();
+// ── Load initial data ────────────────────────────────────────────────────────
+// Draw the list once on startup; renderTasks() asks main for the tasks itself.
+renderTasks();
 
 console.log('[renderer] Main window renderer loaded. window.taskAPI:', window.taskAPI);
