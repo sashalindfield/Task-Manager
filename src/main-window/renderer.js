@@ -22,6 +22,8 @@ let priorityFilter = 'All';
 
 const PRIORITY_CLASS = { High: 'priority-high', Medium: 'priority-medium', Low: 'priority-low' };
 const STATUS_CLASS   = { 'To Do': 'status-todo', 'In Progress': 'status-progress', Done: 'status-done' };
+// NEW FEATURE 3 used only to label the button; main does the real change
+const NEXT_STATUS = { 'To Do': 'In Progress', 'In Progress': 'Done', Done: 'To Do' };
 
 function renderTasks() {
   // Keep a task only if it matches BOTH the status button and the priority menu.
@@ -61,6 +63,7 @@ function createTaskCard(task) {
       </div>
     </div>
     <div class="task-actions">
+      <button class="btn-action btn-cycle" data-action="cycle" data-id="${task.id}">→ ${NEXT_STATUS[task.status]}</button>
       <button class="btn-action btn-edit"   data-action="edit"   data-id="${task.id}">Edit</button>
       <button class="btn-action btn-delete" data-action="delete" data-id="${task.id}">Delete</button>
     </div>
@@ -116,6 +119,11 @@ taskList.addEventListener('click', async (e) => {
     await window.taskAPI.deleteTask(taskId);
     // No need to re-render here: main calls pushTasksToRenderer()
     // which triggers onTasksUpdated → renderTasks() below.
+  }
+
+  // NEW (Feature 3): the cycle button asks main to advance the status.
+  if (action === 'cycle') {
+    window.taskAPI.cycleStatus(taskId);
   }
 });
 

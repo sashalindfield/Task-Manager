@@ -50,6 +50,11 @@ contextBridge.exposeInMainWorld('taskAPI', {
     return () => ipcRenderer.removeListener('tasks:filter', handler);
   },
 
+
+// NEW FEATURE 3 — Status cycle 
+  // Ask main to move this task to its next status.
+  cycleStatus: (taskId) => ipcRenderer.invoke('tasks:cycleStatus', taskId),
+
 });
 
 console.log('[preload] Main window — taskAPI exposed via contextBridge.');

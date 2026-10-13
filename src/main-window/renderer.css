@@ -191,6 +191,8 @@ html, body {
 }
 .btn-edit   { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
 .btn-delete { background: #3d1010;         color: var(--danger);     border: 1px solid #5a1a1a; }
+/* NEW (Feature 3): cycle button uses the accent blue so it stands out. */
+.btn-cycle  { background: var(--surface2); color: var(--accent);     border: 1px solid var(--border); }
 .btn-action:hover { opacity: .8; }
 
 .empty-state {

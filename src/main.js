@@ -107,6 +107,24 @@ ipcMain.handle('tasks:delete', async (_event, taskId) => {
   return true;
 });
 
+// NEW FEATURE 3 Status cycle
+
+// The order statuses move through then loop back to the start
+const STATUS_ORDER = ['To Do', 'In Progress', 'Done'];
+
+// Runs when the renderer calls window.taskAPI.cycleStatus(id)
+ipcMain.handle('tasks:cycleStatus', (_event, taskId) => {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return null;
+
+// Position of the next status
+const nextIndex = (STATUS_ORDER.indexOf(task.status) + 1) % STATUS_ORDER.length;
+task.status = STATUS_ORDER[nextIndex];
+
+pushTasksToRenderer();
+return task;
+});
+
 // ── NEW in v3 — Context menu on a task card ───────────────────────────────────
 // The renderer CANNOT call Menu.buildFromTemplate directly (renderer-process
 // restriction). It invokes this handler; main builds the menu and calls
