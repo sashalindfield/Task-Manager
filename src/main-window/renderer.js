@@ -6,6 +6,7 @@ const taskCount  = document.getElementById('task-count')
 const btnAdd     = document.getElementById('btn-add')
 const btnOpen    = document.getElementById('btn-open')   // NEW in v3
 const btnSave    = document.getElementById('btn-save')   // NEW in v3
+const btnClear   = document.getElementById('btn-clear')  // NEW FEATURE 4 the Clear All button in the header.
 
 const filterBtns = document.querySelectorAll('.filter-btn');
 
@@ -97,6 +98,7 @@ btnAdd.addEventListener('click', () => {
 // ── NEW in v3 — File dialog buttons ──────────────────────────────────────────
 btnOpen.addEventListener('click', () => window.taskAPI.openFile());
 btnSave.addEventListener('click', () => window.taskAPI.saveFile());
+btnClear.addEventListener('click', () => window.taskAPI.clearAll());
 
 // ── NEW in v3 — Event delegation for Edit / Delete buttons ───────────────────
 // One listener on the parent <ul> handles clicks for ALL cards —

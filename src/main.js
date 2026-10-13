@@ -125,6 +125,29 @@ pushTasksToRenderer();
 return task;
 });
 
+// NEW FEATURE 4 — Clear all tasks 
+ipcMain.handle('tasks:clearAll', async () => {
+  // Show the confirmation popup and wait for the user's answer.
+  const result = await dialog.showMessageBox(mainWindow, {
+    type:      'warning',
+    title:     'Clear All Tasks',
+    message:   'Clear all tasks?',
+    detail:    'This action cannot be undone.',
+    buttons:   ['Clear All', 'Cancel'],
+    defaultId: 1,   // Enter key picks Cancel.
+    cancelId:  1,   // Esc key picks Cancel.
+  });
+
+  // Button 0 is 'Clear All'; anything else means stop.
+  if (result.response !== 0) return false;
+
+  // Empty the array in place (same array, no items left).
+  tasks.splice(0, tasks.length);
+  // Send the empty list to the renderer (this also updates the tray).
+  pushTasksToRenderer();
+  return true;
+});
+
 // ── NEW in v3 — Context menu on a task card ───────────────────────────────────
 // The renderer CANNOT call Menu.buildFromTemplate directly (renderer-process
 // restriction). It invokes this handler; main builds the menu and calls

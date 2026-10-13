@@ -80,6 +80,10 @@ html, body {
 }
 .btn-secondary:hover { color: var(--text); background: var(--surface); }
 
+/* NEW FEATURE 4 red text so Clear All looks like a destructive action. */
+.btn-secondary.btn-clear { color: var(--danger); border-color: #5a1a1a; }
+.btn-secondary.btn-clear:hover { color: var(--danger); background: #3d1010; }
+
 .btn-add {
   -webkit-app-region: no-drag;
   background: var(--accent);

@@ -55,6 +55,10 @@ contextBridge.exposeInMainWorld('taskAPI', {
   // Ask main to move this task to its next status.
   cycleStatus: (taskId) => ipcRenderer.invoke('tasks:cycleStatus', taskId),
 
+
+//  NEW FEATURE 4 — Clear all tasks 
+// Ask main to clear every task (main shows the confirmation first).
+  clearAll: () => ipcRenderer.invoke('tasks:clearAll'),
 });
 
 console.log('[preload] Main window — taskAPI exposed via contextBridge.');
