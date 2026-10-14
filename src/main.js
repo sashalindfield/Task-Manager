@@ -24,6 +24,26 @@ let addWindow  = null;
 let editWindow = null;  // NEW in v3
 let tray       = null;  // NEW in v3 — module-scope prevents the GC footgun - GC footgun is when the tray gets garbage collected if not referenced.
 
+/*** V5 update - Declare the settingsPath variable for storing the path to the settings.json file ***/
+//let settingsPath = path.join(app.getPath('userData'), 'settings.json');
+ let settingsPath = null;
+/*** v5 update - Load and save settings functions for managing the settings.json file */
+  function loadSettings() {
+    try {
+      return JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    } catch {
+      return {};
+    }
+  }
+  // *** V5 update - Save the settings.json file with the provided patch (updates).
+  function saveSettings(patch) {
+    const current = loadSettings();
+    fs.writeFileSync(
+      settingsPath,
+      JSON.stringify({ ...current, ...patch }, null, 2)
+    );
+  }
+
 // ── Helper: push current task list to the main window ─────────────────────────
 function pushTasksToRenderer() {
   // NEW FEATURE 2 Refresh the tray tooltip and menu after every change
@@ -239,12 +259,21 @@ ipcMain.handle('dialog:saveFile', async () => {
   }
 });
 
+ipcMain.on('settings:saveFilter', (_event, filter) => {
+  saveSettings({activeFilter: filter});
+});
+
+
 // ── Window creation ───────────────────────────────────────────────────────────
 
 const createWindow = () => {
-  mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+  const saved = loadSettings().windowState || {};
+mainWindow = new BrowserWindow({
+  
+    width: saved.width || 800, // *** v5 update - use saved width if available, otherwise default to 800
+    height: saved.height || 600, // *** v5 update - use saved height if available, otherwise default to 600
+    x: saved.x, // *** v5 update - undefined = OS places the window
+    y: saved.y, // *** v5 update
     title: 'Task Manager',
     icon: path.join(app.getAppPath(), 'assets', 'icon.png'), //<a href="https://www.flaticon.com/free-icons/execution" title="execution icons">Execution icons created by kliwir art - Flaticon</a>
     webPreferences: {
@@ -254,7 +283,26 @@ const createWindow = () => {
     },
   });
 
+  //***v5 update - save window state on resize and move */
+  function saveWindowState() {
+    if (!mainWindow || mainWindow.isMinimized()) return;
+    const { x, y, width, height } = mainWindow.getBounds();
+    saveSettings({ windowState: { x, y, width, height } });
+  }
+  /***v5 update:agttach saveWindowState to events */
+  mainWindow.on('resize', saveWindowState);
+  mainWindow.on('move',   saveWindowState);
+
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+
+  mainWindow.webContents.on('did-finish-load', () => {
+  pushTasksToRenderer();
+  // Push saved filter to renderer
+  const settings = loadSettings();
+  if (settings.activeFilter) {
+    mainWindow.webContents.send('tasks:filter', settings.activeFilter);
+  }
+});
 
   // NEW in v3: 'close' fires BEFORE the window closes — we can cancel it
   // and hide to tray instead of quitting.
@@ -528,6 +576,9 @@ function createTray() {
 
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+
+  settingsPath = path.join(app.getPath('userData'), 'settings.json');
+  console.log('settings path:', settingsPath);
   buildMenu();
   createWindow();
   createTray();   // NEW in v3
@@ -540,7 +591,11 @@ app.whenReady().then(() => {
       mainWindow.show();
     }
   });
+saveSettings({test: true}); //v4
+
+  console.log(loadSettings());//v4
 });
+
 
 // Windows / Linux: quit when the last window closes.
 // macOS: the app stays alive (Dock icon remains; 'activate' re-opens it).

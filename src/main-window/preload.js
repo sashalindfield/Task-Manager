@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('taskAPI', {
   openFile: () => ipcRenderer.invoke('dialog:openFile'),
   saveFile: () => ipcRenderer.invoke('dialog:saveFile'),
 
+  saveFilter: (filter) => ipcRenderer.send('settings:saveFilter', filter),
+
   // NEW FEATURE 1 - Priority filter
   onFilter: (callback) => {
 // Pass only the priority text to the renderer's function

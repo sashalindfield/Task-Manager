@@ -88,6 +88,7 @@ filterBtns.forEach(btn => {
     filterBtns.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeFilter = btn.dataset.filter;
+    window.taskAPI.saveFilter(activeFilter);
     renderTasks();
   });
 });
