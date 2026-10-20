@@ -297,10 +297,11 @@ mainWindow = new BrowserWindow({
 
   mainWindow.webContents.on('did-finish-load', () => {
   pushTasksToRenderer();
+
   // Push saved filter to renderer
   const settings = loadSettings();
   if (settings.activeFilter) {
-    mainWindow.webContents.send('tasks:filter', settings.activeFilter);
+    mainWindow.webContents.send('tasks:restorefilter', settings.activeFilter);
   }
 });
 
@@ -559,7 +560,8 @@ function updateTray() {
 
 function createTray() {
   // Build the tray icon from the assets folder.
-  const iconPath = path.join(app.getAppPath(), 'assets', 'icon.png');
+  //const iconPath = path.join(app.getAppPath(), 'assets', 'icon.png');
+  const iconPath = path.join(process.resourcesPath, 'icon.png');
   const icon = nativeImage.createFromPath(iconPath);
 
   // Keep it in the module-level variable so it isn't garbage collected.

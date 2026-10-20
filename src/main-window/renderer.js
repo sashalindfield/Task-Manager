@@ -148,6 +148,15 @@ window.taskAPI.onFilter((priority) => {
   renderTasks();
 });
 
+// Listen for the restoreFilter event from main and update the UI accordingly.
+window.taskAPI.onRestoreFilter((filter) => {
+  activeFilter = filter;
+  filterBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+  });
+  renderTasks();
+});
+
 // ── IPC — listen for task list updates from main (same as v2) ────────────────
 window.taskAPI.onTasksUpdated((updatedTasks) => {
   renderTasks(updatedTasks);

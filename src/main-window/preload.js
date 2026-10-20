@@ -52,6 +52,13 @@ contextBridge.exposeInMainWorld('taskAPI', {
     return () => ipcRenderer.removeListener('tasks:filter', handler);
   },
 
+  //regester a callback main will call
+  onRestoreFilter: (callback) => {
+    const handler = (_event, filter) => callback(filter);
+    ipcRenderer.on('tasks:restoreFilter', handler);
+    return () => ipcRenderer.removeListener('tasks:restoreFilter', handler);
+  },
+
 
 // NEW FEATURE 3 — Status cycle 
   // Ask main to move this task to its next status.
