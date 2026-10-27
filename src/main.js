@@ -67,7 +67,20 @@ ipcMain.handle('window:open-add', () => { createAddWindow(); });
 ipcMain.handle('window:close-add', () => { if (addWindow) addWindow.close(); });
 
 // Add a new task
+// Validation constants for task properties
+const VALID_PRIORITY = ['Low', 'Medium', 'High']
+const VALID_STATUS = ['To Do','In Progress','Done']
+
+
 ipcMain.handle('tasks:add', (_event, task) => {
+  // Validate the task object before adding it
+  if (typeof task.title !== 'string' // Title must be a string  
+      || task.title.trim().length === 0 // Title cannot be empty
+      || task.title.length > 120 // Maximum title length is 120 characters
+      || !VALID_PRIORITY.includes(task.priority) // Priority must be one of the valid options
+      || !VALID_STATUS.includes(task.status))// Status must be one of the valid options
+    return null
+
   const newTask = {
     id:       nextId++,
     title:    task.title,
@@ -279,6 +292,7 @@ mainWindow = new BrowserWindow({
     webPreferences: {
       contextIsolation: true,
       nodeIntegration:  false,
+      sandbox: true,
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
   });
@@ -336,6 +350,7 @@ function createAddWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration:  false,
+      sandbox: true,
       preload: ADD_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
   });
@@ -357,6 +372,7 @@ function createEditWindow(taskId) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration:  false,
+      sandbox: true,
       preload: EDIT_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
   });
@@ -433,7 +449,7 @@ function buildMenu() {
       label: 'View',
       submenu: [
         { role: 'reload' },
-        { role: 'toggleDevTools' },
+        { role: 'toggleDevTools', visible: !app.isPackaged },
         { type: 'separator' },
         { role: 'resetZoom' },
         { role: 'zoomIn' },
