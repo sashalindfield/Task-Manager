@@ -11,25 +11,28 @@ packagerConfig: {
   },
   rebuildConfig: {},
   makers: [
-    //{
-     // name: '@electron-forge/maker-squirrel',
-      //config: {},
-    //},
     {
-      name: '@electron-forge/maker-zip', 
-      platforms: ['win32'],
+      // Builds the Windows installer (Squirrel).
+      name: '@electron-forge/maker-squirrel',
+      config: {
+        // App ID used by the installer (no spaces).
+        name: 'TaskManager',
+        // File name of the installer that appears in out/make/.
+        setupExe: 'TaskManagerSetup.exe',
+      },
     },
-
-     {
-      name: '@electron-forge/maker-zip', 
+    {
+      // Kept for macOS; skipped when building on Windows.
+      name: '@electron-forge/maker-zip',
       platforms: ['darwin'],
     },
-
     {
+      // Linux maker; skipped when building on Windows.
       name: '@electron-forge/maker-deb',
       config: {},
     },
     {
+      // Linux maker; skipped when building on Windows.
       name: '@electron-forge/maker-rpm',
       config: {},
     },

@@ -14,6 +14,8 @@ blockExoticSubdeps: false
 allowBuilds:
   electron: true
   "@electron/rebuild": true
+  # Lets the Squirrel packager run its setup script (picks the right 7z for your CPU).
+  electron-winstaller: true
 # Force patched versions for known toolchain
 # vulnerabilities in @electron-forge
 overrides:
