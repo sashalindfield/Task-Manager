@@ -23,7 +23,18 @@ window.taskAPI.onLoadTask((task) => {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const title = titleInput.value.trim();
+  const btnSave = document.getElementById('btn-save');
+  // Ignore a second submit while the first one is still being saved.
+  if (btnSave.disabled) return;
+
+  // The task hasn't loaded yet, so there is nothing to save.
+  if (currentTaskId === null) return;
+
+  const title    = titleInput.value.trim();
+  const priority = document.getElementById('task-priority').value;
+  const status   = document.getElementById('task-status').value;
+
+  // The title must not be blank after trimming.
   if (!title) {
     titleError.hidden = false;
     titleInput.focus();
@@ -31,24 +42,30 @@ form.addEventListener('submit', async (e) => {
   }
   titleError.hidden = true;
 
-  const btnSave = document.getElementById('btn-save');
+  // Both dropdowns must have a value (novalidate turns off the browser check).
+  if (!priority || !status) return;
+
+  // Disable the save button while the IPC call is in flight.
   btnSave.disabled    = true;
   btnSave.textContent = 'Saving…';
 
   try {
-    await window.taskAPI.updateTask({
-      id:       currentTaskId,
+    const updated = await window.taskAPI.updateTask({
+      id: currentTaskId,
       title,
-      priority: document.getElementById('task-priority').value,
-      status:   document.getElementById('task-status').value,
+      priority,
+      status,
     });
 
-    // Main has updated the task and called pushTasksToRenderer();
-    // close this window so the user sees the updated list.
+    // Main returns null when it rejects the update, so treat that as a failure.
+    if (!updated) throw new Error('Main rejected the update');
+
+    // Main has saved and pushed the new list; close so the user sees it.
     setTimeout(() => window.taskAPI.closeWindow(), 200);
 
   } catch (err) {
     console.error('[edit-window] Failed to update task:', err);
+    // Let the user try again.
     btnSave.disabled    = false;
     btnSave.textContent = 'Save Changes';
   }

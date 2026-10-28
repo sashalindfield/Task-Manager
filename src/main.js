@@ -72,6 +72,43 @@ const VALID_PRIORITY = ['Low', 'Medium', 'High']
 const VALID_STATUS = ['To Do','In Progress','Done']
 
 
+// Task 3: an id is valid only if it is a positive whole number.
+function isValidId(id) {
+  return Number.isInteger(id) && id > 0;
+}
+
+
+// Task 5: turn untrusted JSON from a file into a safe list of tasks.
+function sanitizeTasks(parsed) {
+  // The file must contain a list of tasks.
+  if (!Array.isArray(parsed)) throw new Error('The file must contain a list of tasks.');
+
+  const seenIds = new Set();   // remembers ids we've already accepted
+  const clean = [];
+
+  for (const t of parsed) {
+    // Skip anything that isn't an object (null, numbers, strings...).
+    if (typeof t !== 'object' || t === null) continue;
+
+    const id    = Number(t.id);
+    const title = String(t.title ?? '').slice(0, 120);   // cap the length at 120
+
+    // Skip bad ids, repeated ids, and blank titles.
+    if (!isValidId(id) || seenIds.has(id) || title.trim().length === 0) continue;
+    seenIds.add(id);
+
+    // Build a NEW object from the four known fields only; unknown keys are dropped.
+    clean.push({
+      id,
+      title,
+      priority: VALID_PRIORITY.includes(t.priority) ? t.priority : 'Low',
+      status:   VALID_STATUS.includes(t.status)     ? t.status   : 'To Do',
+    });
+  }
+
+  return clean;
+}
+
 ipcMain.handle('tasks:add', (_event, task) => {
   // Validate the task object before adding it
   if (typeof task.title !== 'string' // Title must be a string  
@@ -109,15 +146,42 @@ ipcMain.handle('tasks:getOne', (_event, taskId) => {
 
 // Save edits to an existing task
 ipcMain.handle('tasks:update', (_event, updated) => {
+  // Reject anything that isn't a real object (null, a string, etc.).
+  if (typeof updated !== 'object' || updated === null) return null;
+
+  // The id must be a positive whole number.
+  if (!Number.isInteger(updated.id) || updated.id <= 0) return null;
+
+  // The task must actually exist in the array.
   const idx = tasks.findIndex(t => t.id === updated.id);
   if (idx === -1) return null;
-  tasks[idx] = { ...tasks[idx], ...updated };
+
+  // Same field checks as tasks:add.
+  if (typeof updated.title !== 'string'            // title must be text
+      || updated.title.trim().length === 0         // and not blank
+      || updated.title.length > 120                // and at most 120 characters
+      || !VALID_PRIORITY.includes(updated.priority) // priority must be an allowed value
+      || !VALID_STATUS.includes(updated.status))    // status must be an allowed value
+    return null;
+
+  // Copy only the four known fields by hand, never spread the incoming object.
+  tasks[idx] = {
+    id:       tasks[idx].id,   // keep the id we already have
+    title:    updated.title,
+    priority: updated.priority,
+    status:   updated.status,
+  };
+
   pushTasksToRenderer();
   return tasks[idx];
 });
 
 // Delete a task — after native confirmation dialog in main
 ipcMain.handle('tasks:delete', async (_event, taskId) => {
+  // Reject ids that aren't positive whole numbers.
+  if (!isValidId(taskId)) return false;
+
+  // The task must exist before we ask the user anything.
   const task = tasks.find(t => t.id === taskId);
   if (!task) return false;
 
@@ -134,7 +198,11 @@ ipcMain.handle('tasks:delete', async (_event, taskId) => {
 
   if (result.response !== 0) return false;   // 0 = Delete button
 
+  // Look the task up again: it may have been removed while the dialog was open.
   const idx = tasks.findIndex(t => t.id === taskId);
+  // splice(-1, 1) would delete the LAST task, so stop if it's gone.
+  if (idx === -1) return false;
+
   tasks.splice(idx, 1);
   pushTasksToRenderer();
   return true;
@@ -147,9 +215,11 @@ const STATUS_ORDER = ['To Do', 'In Progress', 'Done'];
 
 // Runs when the renderer calls window.taskAPI.cycleStatus(id).
 ipcMain.handle('tasks:cycleStatus', (_event, taskId) => {
-  // Find the task with this id.
+  // Reject ids that aren't positive whole numbers.
+  if (!isValidId(taskId)) return null;
+
+  // Find the task with this id; do nothing if it doesn't exist.
   const task = tasks.find(t => t.id === taskId);
-  // If it no longer exists, do nothing.
   if (!task) return null;
 
   // Position of the next status; the % wraps Done back around to To Do.
@@ -157,10 +227,10 @@ ipcMain.handle('tasks:cycleStatus', (_event, taskId) => {
   // Set the new status.
   task.status = STATUS_ORDER[nextIndex];
 
-  // NEW Feature B only notify when the task has just become Done.
+  // Only notify when the task has just become Done.
   if (task.status === 'Done') {
-    // Show a native OS notification with the task's title.
-    new Notification({ title: 'Task complete', body: task.title }).show();
+    // Keep only the first 80 characters of the title (Task 1).
+    new Notification({ title: 'Task complete', body: task.title.slice(0, 80) }).show();
   }
 
   // Send the updated list to the renderer (this also updates the tray).
@@ -241,8 +311,10 @@ ipcMain.handle('dialog:openFile', async () => {
   });
   if (result.canceled || result.filePaths.length === 0) return false;
   try {
-    const loaded = JSON.parse(fs.readFileSync(result.filePaths[0], 'utf8'));
-    tasks.splice(0, tasks.length, ...loaded);
+       const parsed = JSON.parse(fs.readFileSync(result.filePaths[0], 'utf8'));
+    // Task 5: only load tasks that pass the allowlist.
+    const clean = sanitizeTasks(parsed);
+    tasks.splice(0, tasks.length, ...clean);
     nextId = Math.max(...tasks.map(t => t.id), 0) + 1;
     pushTasksToRenderer();
     return true;
@@ -315,7 +387,7 @@ mainWindow = new BrowserWindow({
   // Push saved filter to renderer
   const settings = loadSettings();
   if (settings.activeFilter) {
-    mainWindow.webContents.send('tasks:restorefilter', settings.activeFilter);
+    mainWindow.webContents.send('tasks:restoreFilter', settings.activeFilter);
   }
 });
 
@@ -418,8 +490,10 @@ function buildMenu() {
             });
             if (result.canceled || result.filePaths.length === 0) return;
             try {
-              const loaded = JSON.parse(fs.readFileSync(result.filePaths[0], 'utf8'));
-              tasks.splice(0, tasks.length, ...loaded);
+                            const parsed = JSON.parse(fs.readFileSync(result.filePaths[0], 'utf8'));
+              // Task 5: only load tasks that pass the allowlist.
+              const clean = sanitizeTasks(parsed);
+              tasks.splice(0, tasks.length, ...clean);
               nextId = Math.max(...tasks.map(t => t.id), 0) + 1;
               pushTasksToRenderer();
             } catch (err) {
