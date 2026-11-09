@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "title": "Design dashboard screen",
+    "priority": "High",
+    "status": "In Progress",
+    "createdAt": 1794264710366,
+    "updatedAt": 1794264710366,
+    "notes": ""
+  },
+  {
+    "id": 2,
+    "title": "Write unit tests for API",
+    "priority": "Medium",
+    "status": "To Do",
+    "createdAt": 1794264710366,
+    "updatedAt": 1794264710366,
+    "notes": ""
+  },
+  {
+    "id": 3,
+    "title": "Update README documentation",
+    "priority": "Low",
+    "status": "Done",
+    "createdAt": 1794264710366,
+    "updatedAt": 1794264710366,
+    "notes": ""
+  },
+  {
+    "id": 4,
+    "title": "Fix login bug",
+    "priority": "High",
+    "status": "To Do",
+    "createdAt": 1794264710366,
+    "updatedAt": 1794264710366,
+    "notes": ""
+  }
+]

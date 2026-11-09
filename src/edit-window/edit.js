@@ -15,6 +15,7 @@ window.taskAPI.onLoadTask((task) => {
   titleInput.value = task.title;
   document.getElementById('task-priority').value = task.priority;
   document.getElementById('task-status').value   = task.status;
+  document.getElementById('task-notes').value    = task.notes ?? '';   // empty if none
   titleInput.focus();
   titleInput.select();
 });
@@ -33,6 +34,7 @@ form.addEventListener('submit', async (e) => {
   const title    = titleInput.value.trim();
   const priority = document.getElementById('task-priority').value;
   const status   = document.getElementById('task-status').value;
+  const notes    = document.getElementById('task-notes').value;
 
   // The title must not be blank after trimming.
   if (!title) {
@@ -42,8 +44,8 @@ form.addEventListener('submit', async (e) => {
   }
   titleError.hidden = true;
 
-  // Both dropdowns must have a value (novalidate turns off the browser check).
-  if (!priority || !status) return;
+  // Both dropdowns must have a value, and notes can't pass 500 characters.
+  if (!priority || !status || notes.length > 500) return;
 
   // Disable the save button while the IPC call is in flight.
   btnSave.disabled    = true;
@@ -55,6 +57,7 @@ form.addEventListener('submit', async (e) => {
       title,
       priority,
       status,
+      notes,
     });
 
     // Main returns null when it rejects the update, so treat that as a failure.

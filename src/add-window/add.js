@@ -19,6 +19,7 @@ form.addEventListener('submit', async (e) => {
   const title    = titleInput.value.trim();
   const priority = document.getElementById('task-priority').value;
   const status   = document.getElementById('task-status').value;
+    const notes    = document.getElementById('task-notes').value;
 
   // The title must not be blank after trimming.
   if (!title) {
@@ -28,8 +29,8 @@ form.addEventListener('submit', async (e) => {
   }
   titleError.hidden = true;
 
-  // Both dropdowns must have a value (novalidate turns off the browser check).
-  if (!priority || !status) return;
+  // Both dropdowns must have a value, and notes can't pass 500 characters.
+  if (!priority || !status || notes.length > 500) return;
 
   // Disable the save button while the IPC call is in flight.
   btnSave.disabled = true;
@@ -37,7 +38,7 @@ form.addEventListener('submit', async (e) => {
 
   try {
     // Send the task to main; await because addTask is asynchronous.
-    const saved = await window.taskAPI.addTask({ title, priority, status });
+       const saved = await window.taskAPI.addTask({ title, priority, status, notes });
 
     // Main returns null when it rejects the task, so treat that as a failure.
     if (!saved) throw new Error('Main rejected the task');

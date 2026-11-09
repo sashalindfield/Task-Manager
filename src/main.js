@@ -10,11 +10,14 @@ if (require('electron-squirrel-startup')) {
 // ── Task data — owned by main (same as v2) ────────────────────────────────────
 let nextId = 5;
 
+// Starting time used for the seed tasks below.
+const seedTime = Date.now();
+
 const tasks = [
-  { id: 1, title: 'Design dashboard screen',     priority: 'High',   status: 'In Progress' },
-  { id: 2, title: 'Write unit tests for API',    priority: 'Medium', status: 'To Do'       },
-  { id: 3, title: 'Update README documentation', priority: 'Low',    status: 'Done'        },
-  { id: 4, title: 'Fix login bug',               priority: 'High',   status: 'To Do'       },
+  { id: 1, title: 'Design dashboard screen',     priority: 'High',   status: 'In Progress', createdAt: seedTime, updatedAt: seedTime, notes: '' },
+  { id: 2, title: 'Write unit tests for API',    priority: 'Medium', status: 'To Do',       createdAt: seedTime, updatedAt: seedTime, notes: '' },
+  { id: 3, title: 'Update README documentation', priority: 'Low',    status: 'Done',        createdAt: seedTime, updatedAt: seedTime, notes: '' },
+  { id: 4, title: 'Fix login bug',               priority: 'High',   status: 'To Do',       createdAt: seedTime, updatedAt: seedTime, notes: '' },
 ];
 
 // ── Module-scope window / tray references ─────────────────────────────────────
@@ -78,6 +81,12 @@ function isValidId(id) {
 }
 
 
+// Notes are valid if they are text of 500 characters or fewer (empty is fine).
+function isValidNotes(notes) {
+  return typeof notes === 'string' && notes.length <= 500;
+}
+
+
 // Task 5: turn untrusted JSON from a file into a safe list of tasks.
 function sanitizeTasks(parsed) {
   // The file must contain a list of tasks.
@@ -85,6 +94,7 @@ function sanitizeTasks(parsed) {
 
   const seenIds = new Set();   // remembers ids we've already accepted
   const clean = [];
+  const now = Date.now();      // fallback time for files that have no timestamps
 
   for (const t of parsed) {
     // Skip anything that isn't an object (null, numbers, strings...).
@@ -97,32 +107,54 @@ function sanitizeTasks(parsed) {
     if (!isValidId(id) || seenIds.has(id) || title.trim().length === 0) continue;
     seenIds.add(id);
 
-    // Build a NEW object from the four known fields only; unknown keys are dropped.
+    const created = Number(t.createdAt);
+    const updated = Number(t.updatedAt);
+
+    // Build a NEW object from the known fields only; unknown keys are dropped.
     clean.push({
       id,
       title,
-      priority: VALID_PRIORITY.includes(t.priority) ? t.priority : 'Low',
-      status:   VALID_STATUS.includes(t.status)     ? t.status   : 'To Do',
+      priority:  VALID_PRIORITY.includes(t.priority) ? t.priority : 'Low',
+      status:    VALID_STATUS.includes(t.status)     ? t.status   : 'To Do',
+      // Keep a real timestamp from the file, otherwise use the current time.
+      createdAt: Number.isFinite(created) && created > 0 ? created : now,
+      updatedAt: Number.isFinite(updated) && updated > 0 ? updated : now,
+      // Keep text notes (cut to 500 characters), otherwise use an empty string.
+      notes:     typeof t.notes === 'string' ? t.notes.slice(0, 500) : '',
     });
   }
 
   return clean;
 }
 
+
 ipcMain.handle('tasks:add', (_event, task) => {
+  // Reject anything that isn't a real object.
+  if (typeof task !== 'object' || task === null) return null;
+
+  // Notes are optional; use an empty string when none are sent.
+  const notes = task.notes ?? '';
+
   // Validate the task object before adding it
   if (typeof task.title !== 'string' // Title must be a string  
       || task.title.trim().length === 0 // Title cannot be empty
       || task.title.length > 120 // Maximum title length is 120 characters
       || !VALID_PRIORITY.includes(task.priority) // Priority must be one of the valid options
-      || !VALID_STATUS.includes(task.status))// Status must be one of the valid options
+      || !VALID_STATUS.includes(task.status) // Status must be one of the valid options
+      || !isValidNotes(notes)) // Notes must be text of 500 characters or fewer
     return null
 
+  // One timestamp so createdAt and updatedAt match on a new task.
+  const now = Date.now();
+
   const newTask = {
-    id:       nextId++,
-    title:    task.title,
-    priority: task.priority,
-    status:   task.status,
+    id:        nextId++,
+    title:     task.title,
+    priority:  task.priority,
+    status:    task.status,
+    createdAt: now,   // set by main only, never taken from the renderer
+    updatedAt: now,   // set by main only, never taken from the renderer
+    notes,
   };
   tasks.push(newTask);
   pushTasksToRenderer();
@@ -156,20 +188,27 @@ ipcMain.handle('tasks:update', (_event, updated) => {
   const idx = tasks.findIndex(t => t.id === updated.id);
   if (idx === -1) return null;
 
+  // Notes are optional here: keep the current notes if none are sent.
+  const notes = updated.notes === undefined ? tasks[idx].notes : updated.notes;
+
   // Same field checks as tasks:add.
   if (typeof updated.title !== 'string'            // title must be text
       || updated.title.trim().length === 0         // and not blank
       || updated.title.length > 120                // and at most 120 characters
       || !VALID_PRIORITY.includes(updated.priority) // priority must be an allowed value
-      || !VALID_STATUS.includes(updated.status))    // status must be an allowed value
+      || !VALID_STATUS.includes(updated.status)     // status must be an allowed value
+      || !isValidNotes(notes))                      // notes must be 500 characters or fewer
     return null;
 
-  // Copy only the four known fields by hand, never spread the incoming object.
+  // Copy only the known fields by hand, never spread the incoming object.
   tasks[idx] = {
-    id:       tasks[idx].id,   // keep the id we already have
-    title:    updated.title,
-    priority: updated.priority,
-    status:   updated.status,
+    id:        tasks[idx].id,          // keep the id we already have
+    title:     updated.title,
+    priority:  updated.priority,
+    status:    updated.status,
+    createdAt: tasks[idx].createdAt,   // never changes after creation
+    updatedAt: Date.now(),             // set by main on every edit
+    notes,
   };
 
   pushTasksToRenderer();
@@ -226,6 +265,8 @@ ipcMain.handle('tasks:cycleStatus', (_event, taskId) => {
   const nextIndex = (STATUS_ORDER.indexOf(task.status) + 1) % STATUS_ORDER.length;
   // Set the new status.
   task.status = STATUS_ORDER[nextIndex];
+    // Record when this change happened.
+  task.updatedAt = Date.now();
 
   // Only notify when the task has just become Done.
   if (task.status === 'Done') {
@@ -411,7 +452,7 @@ function createAddWindow() {
 
   addWindow = new BrowserWindow({
     width:       440,
-    height:      380,
+    height:      520,
     parent:      mainWindow,
     modal:       true,
     title:       'Add Task',
@@ -436,7 +477,7 @@ function createEditWindow(taskId) {
   if (editWindow) { editWindow.focus(); return; }
 
   editWindow = new BrowserWindow({
-    width: 440, height: 380,
+    width: 440, height: 520,
     parent: mainWindow, modal: true,
     title: 'Edit Task',
     icon: path.join(app.getAppPath(), 'assets', 'icon.png'), 
@@ -592,8 +633,14 @@ async function markAllDone() {
   // Button 0 is 'Mark All Done'; anything else means stop.
   if (result.response !== 0) return;
 
-  // Set every task's status to Done.
-  tasks.forEach(t => { t.status = 'Done'; });
+  // Set every task's status to Done, and record the change time on the ones that changed.
+  const now = Date.now();
+  tasks.forEach(t => {
+    if (t.status !== 'Done') {
+      t.status = 'Done';
+      t.updatedAt = now;
+    }
+  });
   // Push the change to the renderer (this also updates the tray).
   pushTasksToRenderer();
 }
