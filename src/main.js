@@ -581,7 +581,7 @@ function createDetailWindow(taskId) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration:  false,
-      sandbox: true,
+      sandbox: true, //step 4 check
       preload: DETAIL_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
   });
