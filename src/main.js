@@ -25,6 +25,8 @@ const tasks = [
 let mainWindow = null;
 let addWindow  = null;
 let editWindow = null;  // NEW in v3
+let detailWindow = null;  // Detail window (one at a time)
+let detailTaskId = null;  // which task the Detail window is showing
 let tray       = null;  // NEW in v3 — module-scope prevents the GC footgun - GC footgun is when the tray gets garbage collected if not referenced.
 
 /*** V5 update - Declare the settingsPath variable for storing the path to the settings.json file ***/
@@ -177,11 +179,21 @@ ipcMain.handle('tasks:getOne', (_event, taskId) => {
 });
 
 
-// Open the Detail window for a task (placeholder: the window comes in the next piece).
+// NEW PART 1 STEP 2: Open the Detail window for a task.
 ipcMain.handle('window:open-detail', (_event, taskId) => {
   // Ignore ids that aren't positive whole numbers.
   if (!isValidId(taskId)) return;
-  console.log('[main] Detail window requested for task', taskId);
+  // Ignore ids that don't match a task.
+  if (!tasks.some(t => t.id === taskId)) return;
+  createDetailWindow(taskId);
+});
+
+// NEW PART 1 STEP 2: Return one task's details to the Detail window.
+ipcMain.handle('tasks:getDetail', (_event, taskId) => {
+  // Reject ids that aren't positive whole numbers.
+  if (!isValidId(taskId)) return null;
+  // Return the task, or null if it doesn't exist.
+  return tasks.find(t => t.id === taskId) ?? null;
 });
 
 // Save edits to an existing task
@@ -514,6 +526,44 @@ function onPriorityFilterClick(menuItem) {
     mainWindow.webContents.send('tasks:filter', menuItem.label);
   }
 }
+// Detail window: a non-modal, read-only view of one task.
+function createDetailWindow(taskId) {
+  // Remember which task is shown (used later for live updates).
+  detailTaskId = taskId;
+
+  // Page address with the task id on the end, like ...?id=5
+  const url = `${DETAIL_WINDOW_WEBPACK_ENTRY}?id=${taskId}`;
+
+  // If the window is already open, show the new task in it.
+  if (detailWindow) {
+    detailWindow.loadURL(url);
+    detailWindow.focus();
+    return;
+  }
+
+  detailWindow = new BrowserWindow({
+    width:  460,
+    height: 560,
+    title:  'Task Detail',
+    icon:   path.join(app.getAppPath(), 'assets', 'icon.png'),
+    // No parent or modal setting, so the main window stays usable.
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration:  false,
+      sandbox: true,
+      preload: DETAIL_WINDOW_PRELOAD_WEBPACK_ENTRY,
+    },
+  });
+
+  detailWindow.loadURL(url);
+
+  // Forget the window when it closes.
+  detailWindow.on('closed', () => {
+    detailWindow = null;
+    detailTaskId = null;
+  });
+}
+
 
 // ── App menu ──────────────────────────────────────────────────────────────────
 function buildMenu() {

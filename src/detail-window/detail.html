@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- CSP: same policy as the other windows ('unsafe-eval' is only for webpack's dev build) -->
+    <meta
+          http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+          script-src 'self' 'unsafe-eval';
+          style-src 'self' 'unsafe-inline';"
+    />
+    <title>Task Detail</title>
+  </head>
+  <body>
+
+    <div class="app">
+      <header class="modal-header">
+        <h2>Task Detail</h2>
+      </header>
+
+      <main class="detail-body">
+        <!-- Shown when the task can't be found -->
+        <p id="detail-error" class="detail-error" hidden>Task not found.</p>
+
+        <!-- Read-only fields, filled in by detail.js -->
+        <dl id="detail-list" class="detail-list" hidden>
+          <div class="detail-row"><dt>ID</dt><dd id="detail-id"></dd></div>
+          <div class="detail-row"><dt>Title</dt><dd id="detail-title"></dd></div>
+          <div class="detail-row"><dt>Priority</dt><dd id="detail-priority"></dd></div>
+          <div class="detail-row"><dt>Status</dt><dd id="detail-status"></dd></div>
+          <div class="detail-row"><dt>Created</dt><dd id="detail-created"></dd></div>
+          <div class="detail-row"><dt>Last Updated</dt><dd id="detail-updated"></dd></div>
+          <div class="detail-row"><dt>Notes</dt><dd id="detail-notes"></dd></div>
+        </dl>
+      </main>
+
+      <div class="form-actions detail-actions">
+        <button type="button" id="btn-close" class="btn-secondary">Close</button>
+      </div>
+    </div>
+
+  </body>
+</html>
