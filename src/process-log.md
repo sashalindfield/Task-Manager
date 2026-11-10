@@ -43,3 +43,12 @@
 - **Installed 3.0.0 from the Squirrel installer.** Ran TaskManagerSetup.exe from
   out\make, quit the app after the first run (Squirrel blocks update checks on first
   launch), then reopened it from the Start menu.
+
+- **Published version 3.0.1.** Bumped the version in package.json from 3.0.0 to 3.0.1,
+  pushed to the public repo, and ran `pnpm run publish`. v3.0.1 appears on the Releases
+  page with its own RELEASES and full .nupkg files.
+
+- **Ran the live update test.** Opened the installed 3.0.0 app from the Start menu.
+  It found v3.0.1 on GitHub Releases, downloaded it, and showed the banner with the
+  "Restart and install" button. Clicking the button restarted the app as 3.0.1, and
+  `app-3.0.1` appeared in %LOCALAPPDATA%\TaskManager.
