@@ -43,6 +43,17 @@ async function loadTask() {
   showTask(task);
 }
 
+// Redraw whenever main pushes a new list (nothing is stored here).
+window.taskAPI.onTasksUpdated((tasks) => {
+  // Find the task this window is showing.
+  const task = tasks.find(t => t.id === taskId);
+  // If it's missing, main closes this window, so there's nothing to draw.
+  if (!task) return;
+  detailError.hidden = true;
+  detailList.hidden  = false;
+  showTask(task);
+});
+
 // The Close button just closes this window.
 document.getElementById('btn-close').addEventListener('click', () => window.close());
 

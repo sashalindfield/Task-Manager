@@ -56,6 +56,17 @@ function pushTasksToRenderer() {
   if (mainWindow) {
     mainWindow.webContents.send('tasks:updated', tasks);
   }
+
+  // NEW PART 1 STEP 2: keep the Detail window in sync with the task list.
+  if (detailWindow && !detailWindow.isDestroyed()) {
+    if (tasks.some(t => t.id === detailTaskId)) {
+      // Its task still exists, so send the fresh list.
+      detailWindow.webContents.send('tasks:updated', tasks);
+    } else {
+      // Its task was deleted, so close the window.
+      detailWindow.close();
+    }
+  }
 }
 
 // ── IPC Handlers ──────────────────────────────────────────────────────────────
