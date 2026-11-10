@@ -35,3 +35,11 @@
   terminal session as the GITHUB_TOKEN environment variable only; it is not saved in
   any file or committed. Set `draft: false` in the publisher config so releases go
   live and the update service can find them.
+
+- **Published version 3.0.0 to GitHub Releases.** Ran `pnpm run publish` with
+  GITHUB_TOKEN set. The release v3.0.0 appears on the repo's Releases page with
+  TaskManagerSetup.exe, RELEASES and the full .nupkg attached.
+
+- **Installed 3.0.0 from the Squirrel installer.** Ran TaskManagerSetup.exe from
+  out\make, quit the app after the first run (Squirrel blocks update checks on first
+  launch), then reopened it from the Start menu.
