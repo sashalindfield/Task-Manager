@@ -67,7 +67,11 @@ contextBridge.exposeInMainWorld('taskAPI', {
 
 //  NEW FEATURE 4 — Clear all tasks 
 // Ask main to clear every task (main shows the confirmation first).
-  clearAll: () => ipcRenderer.invoke('tasks:clearAll'),
+    clearAll: () => ipcRenderer.invoke('tasks:clearAll'),
+
+  // Ask main to open the Detail window for this task id.
+  openDetailWindow: (taskId) => ipcRenderer.invoke('window:open-detail', taskId),
 });
+
 
 console.log('[preload] Main window — taskAPI exposed via contextBridge.');

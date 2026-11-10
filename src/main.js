@@ -176,6 +176,14 @@ ipcMain.handle('tasks:getOne', (_event, taskId) => {
   return tasks.find(t => t.id === taskId) || null;
 });
 
+
+// Open the Detail window for a task (placeholder: the window comes in the next piece).
+ipcMain.handle('window:open-detail', (_event, taskId) => {
+  // Ignore ids that aren't positive whole numbers.
+  if (!isValidId(taskId)) return;
+  console.log('[main] Detail window requested for task', taskId);
+});
+
 // Save edits to an existing task
 ipcMain.handle('tasks:update', (_event, updated) => {
   // Reject anything that isn't a real object (null, a string, etc.).
