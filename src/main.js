@@ -1,6 +1,8 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain, Tray, nativeImage, Notification } = require('electron')
 const path = require('node:path');
 const fs   = require('node:fs');
+// Part 2: checks GitHub Releases for newer versions.
+const { updateElectronApp } = require('update-electron-app');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -810,6 +812,12 @@ app.whenReady().then(() => {
   buildMenu();
   createWindow();
   createTray();   // NEW in v3
+
+    // Check for updates on launch; our own UI replaces the default dialog.
+  updateElectronApp({
+    notifyUser: false,
+    logger: { log: (...args) => console.log('[update]', ...args) },
+  });
 
   // macOS: re-open the window when the Dock icon is clicked
   app.on('activate', () => {

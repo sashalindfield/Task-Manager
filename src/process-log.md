@@ -12,3 +12,10 @@
   `@octokit/endpoint@9.0.6` ("high-risk trust downgrade") because of
   `trustPolicy: no-downgrade` in pnpm-workspace.yaml. Rather than disabling the policy,
   I added a narrow `trustPolicyExclude` entry for that one package version.
+
+- **Read the update library docs and chose one.** electron-updater's docs say
+  Squirrel.Windows is not supported (NSIS only), and our installer is Squirrel, so I
+  chose Electron's built-in autoUpdater through update-electron-app. It checks on
+  startup, reads the `repository` field, and needs a public repo plus Squirrel assets
+  (RELEASES, *-full.nupkg, *.exe) on each GitHub Release. Set notifyUser to false so the
+  renderer shows its own UI. Added the check on launch in main.js.
