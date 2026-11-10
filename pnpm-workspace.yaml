@@ -25,3 +25,7 @@ overrides:
   tmp: ">=0.2.6"
   semver: ">=7.7.3"
   undici-types: ">=6.21.0"
+
+  # Part 2: allow one flagged dependency of the GitHub publisher.
+trustPolicyExclude:
+  - '@octokit/endpoint@9.0.6'

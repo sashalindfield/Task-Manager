@@ -37,6 +37,20 @@ packagerConfig: {
       config: {},
     },
   ],
+
+  // Part 2: where releases are published.
+  publishers: [
+    {
+      // Uploads the built installer files to GitHub Releases.
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: { owner: 'sashalindfield', name: 'Task-Manager' },
+        // Mark releases as normal ones, not prereleases.
+        prerelease: false,
+      },
+    },
+  ],
+
   plugins: [
     {
       name: '@electron-forge/plugin-auto-unpack-natives',
