@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('taskAPI', {
     ipcRenderer.on('tasks:updated', handler);
     return () => ipcRenderer.removeListener('tasks:updated', handler);
   },
+
+  // Ask main to save new notes for this task.
+  updateNotes: (taskId, notes) => ipcRenderer.invoke('tasks:updateNotes', taskId, notes),
 });
 
 console.log('[preload] Detail window — taskAPI exposed via contextBridge.');

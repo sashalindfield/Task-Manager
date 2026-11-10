@@ -207,6 +207,26 @@ ipcMain.handle('tasks:getDetail', (_event, taskId) => {
   return tasks.find(t => t.id === taskId) ?? null;
 });
 
+
+// NEW PART 1 STEP 3: Save new notes from the Detail window.
+ipcMain.handle('tasks:updateNotes', (_event, taskId, notes) => {
+  // Reject ids that aren't positive whole numbers.
+  if (!isValidId(taskId)) return null;
+  // Notes must be text of 500 characters or fewer.
+  if (!isValidNotes(notes)) return null;
+  // The task must exist.
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return null;
+
+  task.notes = notes;
+  // Main sets the time, never the window.
+  task.updatedAt = Date.now();
+
+  // Tell every window about the change.
+  pushTasksToRenderer();
+  return task;
+});
+
 // Save edits to an existing task
 ipcMain.handle('tasks:update', (_event, updated) => {
   // Reject anything that isn't a real object (null, a string, etc.).

@@ -30,7 +30,26 @@
           <div class="detail-row"><dt>Status</dt><dd id="detail-status"></dd></div>
           <div class="detail-row"><dt>Created</dt><dd id="detail-created"></dd></div>
           <div class="detail-row"><dt>Last Updated</dt><dd id="detail-updated"></dd></div>
-          <div class="detail-row"><dt>Notes</dt><dd id="detail-notes"></dd></div>
+                    <div class="detail-row">
+            <dt>Notes</dt>
+            <dd>
+              <!-- Normal view: the notes text with an Edit button beside it -->
+              <div id="notes-view" class="notes-view">
+                <span id="detail-notes"></span>
+                <button type="button" id="btn-edit-notes" class="btn-secondary btn-small">Edit</button>
+              </div>
+
+              <!-- Edit view: shown only after clicking Edit -->
+              <div id="notes-editor" class="notes-editor" hidden>
+                <textarea id="notes-input" rows="5" maxlength="500"></textarea>
+                <span class="field-error" id="notes-error" hidden>Could not save the notes.</span>
+                <div class="notes-buttons">
+                  <button type="button" id="btn-cancel-notes" class="btn-secondary">Cancel</button>
+                  <button type="button" id="btn-save-notes" class="btn-primary">Save</button>
+                </div>
+              </div>
+            </dd>
+          </div>
         </dl>
       </main>
 
