@@ -3,6 +3,8 @@ const path = require('node:path');
 const fs   = require('node:fs');
 // Part 2: checks GitHub Releases for newer versions.
 const { updateElectronApp } = require('update-electron-app');
+// Electron's built-in updater; we listen to its events.
+const { autoUpdater } = require('electron');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -30,6 +32,9 @@ let editWindow = null;  // NEW in v3
 let detailWindow = null;  // Detail window (one at a time)
 let detailTaskId = null;  // which task the Detail window is showing
 let tray       = null;  // NEW in v3 — module-scope prevents the GC footgun - GC footgun is when the tray gets garbage collected if not referenced.
+// Part 2: true only after an update has finished downloading.
+let updateReady = false;
+
 
 /*** V5 update - Declare the settingsPath variable for storing the path to the settings.json file ***/
 //let settingsPath = path.join(app.getPath('userData'), 'settings.json');
@@ -442,6 +447,15 @@ ipcMain.on('settings:saveFilter', (_event, filter) => {
   saveSettings({activeFilter: filter});
 });
 
+// Part 2: restarts the app and installs, only if a download finished.
+ipcMain.handle('update:install', () => {
+  if (!updateReady) return false;
+  // Without this, the hide-to-tray close handler would block the restart.
+  app.isQuitting = true;
+  autoUpdater.quitAndInstall();
+  return true;
+});
+
 
 // ── Window creation ───────────────────────────────────────────────────────────
 
@@ -817,6 +831,22 @@ app.whenReady().then(() => {
   updateElectronApp({
     notifyUser: false,
     logger: { log: (...args) => console.log('[update]', ...args) },
+  });
+
+    // Tell the main window when an update is found.
+  autoUpdater.on('update-available', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update:available');
+    }
+  });
+
+  // Tell the main window when the update has finished downloading.
+  autoUpdater.on('update-downloaded', (_event, _notes, releaseName) => {
+    updateReady = true;   // lets the install request through
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      // Send only the version name as plain text.
+      mainWindow.webContents.send('update:downloaded', String(releaseName || ''));
+    }
   });
 
   // macOS: re-open the window when the Dock icon is clicked

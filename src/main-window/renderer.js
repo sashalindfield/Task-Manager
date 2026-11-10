@@ -169,6 +169,33 @@ window.taskAPI.onTasksUpdated((updatedTasks) => {
   renderTasks(updatedTasks);
 });
 
+
+// ── Part 2: update banner ────────────────────────────────────────────────────
+const updateBanner  = document.getElementById('update-banner');
+const updateMessage = document.getElementById('update-message');
+const btnInstall    = document.getElementById('btn-update-install');
+
+// An update was found and is downloading.
+window.taskAPI.onUpdateAvailable(() => {
+  updateMessage.textContent = 'A new version was found and is downloading…';
+  updateBanner.hidden = false;
+});
+
+// The download finished; show the restart button.
+window.taskAPI.onUpdateDownloaded((version) => {
+  updateMessage.textContent = version
+    ? `Version ${version} is ready to install.`
+    : 'An update is ready to install.';
+  btnInstall.hidden = false;
+  updateBanner.hidden = false;
+});
+
+// Ask main to restart and install.
+btnInstall.addEventListener('click', () => {
+  btnInstall.disabled = true;
+  window.taskAPI.installUpdate();
+});
+
 // ── Load initial data ────────────────────────────────────────────────────────
 // Draw the list once on startup; renderTasks() asks main for the tasks itself.
 renderTasks();

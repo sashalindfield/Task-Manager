@@ -19,3 +19,13 @@
   startup, reads the `repository` field, and needs a public repo plus Squirrel assets
   (RELEASES, *-full.nupkg, *.exe) on each GitHub Release. Set notifyUser to false so the
   renderer shows its own UI. Added the check on launch in main.js.
+
+- **Forwarded updater events to the renderer.** In main.js, listened to autoUpdater's
+  `update-available` and `update-downloaded` events and sent `update:available` and
+  `update:downloaded` to the main window with webContents.send, guarding against a
+  missing or destroyed window. Only the version name (a string) is sent.
+
+- **Added the update banner and restart button.** Added a hidden banner to the main
+  window HTML/CSS. The renderer shows it on `update:available` and shows a "Restart
+  and install" button on `update:downloaded`. The message is set with textContent,
+  and the button calls window.taskAPI.installUpdate().

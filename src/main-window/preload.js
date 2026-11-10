@@ -22,6 +22,19 @@ contextBridge.exposeInMainWorld('taskAPI', {
     return () => ipcRenderer.removeListener('tasks:updated', handler);
   },
 
+    // Part 2: runs when main reports an update was found.
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on('update:available', () => callback());
+  },
+
+  // Part 2: runs when the update has finished downloading.
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on('update:downloaded', (_event, version) => callback(String(version)));
+  },
+
+  // Part 2: asks main to restart the app and install the update.
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+
   // ── NEW in v3 — Edit / Delete ─────────────────────────────────────────────
 
   // Ask main to open the edit window for this task id
