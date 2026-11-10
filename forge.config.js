@@ -43,8 +43,10 @@ packagerConfig: {
     {
       // Uploads the built installer files to GitHub Releases.
       name: '@electron-forge/publisher-github',
-      config: {
+         config: {
         repository: { owner: 'sashalindfield', name: 'Task-Manager' },
+        // Publish releases as live, not drafts, so the updater can see them.
+        draft: false,
         // Mark releases as normal ones, not prereleases.
         prerelease: false,
       },

@@ -29,3 +29,9 @@
   window HTML/CSS. The renderer shows it on `update:available` and shows a "Restart
   and install" button on `update:downloaded`. The message is set with textContent,
   and the button calls window.taskAPI.installUpdate().
+
+- **Set up publishing credentials.** Created a fine-grained GitHub token limited to
+  the Task-Manager repo with Contents read/write, 7-day expiry. Loaded it into the
+  terminal session as the GITHUB_TOKEN environment variable only; it is not saved in
+  any file or committed. Set `draft: false` in the publisher config so releases go
+  live and the update service can find them.
