@@ -6,23 +6,54 @@ const { updateElectronApp } = require('update-electron-app');
 // Electron's built-in updater; we listen to its events.
 const { autoUpdater } = require('electron');
 
+const Store = require('electron-store').default;
+//create a store instance for managing application settings
+const settingsStore = new Store({
+name: 'settings',
+defaults: {
+  windowState: { x: undefined, y: undefined, width: 450, height: 520 },
+  activeFilter: 'All'
+}
+});
+//Initialize the store for task data
+const taskStore = new Store({
+  name: 'task',
+  defaults: {tasks: [] }
+});
+
+//timeout handle for debounced save
+let saveTimeout = null//Debounce save function for task updates
+function debouncedSave() {
+  clearTimeout(saveTimeout)
+  saveTimeout = setTimeout(() => {
+    taskStore.set('tasks', tasks)
+  }, 300)
+};
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+
+
+// // Starting time used for the seed tasks below.
+// const seedTime = Date.now();
+
+// const tasks = [
+//   { id: 1, title: 'Design dashboard screen',     priority: 'High',   status: 'In Progress', createdAt: seedTime, updatedAt: seedTime, notes: '' },
+//   { id: 2, title: 'Write unit tests for API',    priority: 'Medium', status: 'To Do',       createdAt: seedTime, updatedAt: seedTime, notes: '' },
+//   { id: 3, title: 'Update README documentation', priority: 'Low',    status: 'Done',        createdAt: seedTime, updatedAt: seedTime, notes: '' },
+//   { id: 4, title: 'Fix login bug',               priority: 'High',   status: 'To Do',       createdAt: seedTime, updatedAt: seedTime, notes: '' },
+// ];
+
+//loads tasks form store
+let tasks = taskStore.get('tasks')
+//filters invalid
+tasks = tasks.filter(t => t && typeof t.id === 'number')
+
 // ── Task data — owned by main (same as v2) ────────────────────────────────────
-let nextId = 5;
-
-// Starting time used for the seed tasks below.
-const seedTime = Date.now();
-
-const tasks = [
-  { id: 1, title: 'Design dashboard screen',     priority: 'High',   status: 'In Progress', createdAt: seedTime, updatedAt: seedTime, notes: '' },
-  { id: 2, title: 'Write unit tests for API',    priority: 'Medium', status: 'To Do',       createdAt: seedTime, updatedAt: seedTime, notes: '' },
-  { id: 3, title: 'Update README documentation', priority: 'Low',    status: 'Done',        createdAt: seedTime, updatedAt: seedTime, notes: '' },
-  { id: 4, title: 'Fix login bug',               priority: 'High',   status: 'To Do',       createdAt: seedTime, updatedAt: seedTime, notes: '' },
-];
+let nextId = tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
 
 // ── Module-scope window / tray references ─────────────────────────────────────
 // IMPORTANT: must be module-scope — a local variable would be GC'd silently.
@@ -177,6 +208,8 @@ ipcMain.handle('tasks:add', (_event, task) => {
     notes,
   };
   tasks.push(newTask);
+  //saves updated task list to store
+  taskStore.set('tasks', tasks);
   pushTasksToRenderer();
   return newTask;
 });
@@ -229,6 +262,8 @@ ipcMain.handle('tasks:updateNotes', (_event, taskId, notes) => {
   // Main sets the time, never the window.
   task.updatedAt = Date.now();
 
+  debouncedSave()
+
   // Tell every window about the change.
   pushTasksToRenderer();
   return task;
@@ -269,6 +304,9 @@ ipcMain.handle('tasks:update', (_event, updated) => {
     notes,
   };
 
+   //saves updated task list to store
+  taskStore.set('tasks', tasks);
+
   pushTasksToRenderer();
   return tasks[idx];
 });
@@ -301,6 +339,8 @@ ipcMain.handle('tasks:delete', async (_event, taskId) => {
   if (idx === -1) return false;
 
   tasks.splice(idx, 1);
+   //saves updated task list to store
+  taskStore.set('tasks', tasks);
   pushTasksToRenderer();
   return true;
 });
@@ -332,6 +372,9 @@ ipcMain.handle('tasks:cycleStatus', (_event, taskId) => {
     new Notification({ title: 'Task complete', body: task.title.slice(0, 80) }).show();
   }
 
+   //saves updated task list to store
+  taskStore.set('tasks', tasks);
+
   // Send the updated list to the renderer (this also updates the tray).
   pushTasksToRenderer();
   return task;
@@ -355,6 +398,8 @@ ipcMain.handle('tasks:clearAll', async () => {
 
   // Empty the array in place (same array, no items left).
   tasks.splice(0, tasks.length);
+   //saves updated task list to store
+  taskStore.set('tasks', tasks);
   // Send the empty list to the renderer (this also updates the tray).
   pushTasksToRenderer();
   return true;
@@ -388,6 +433,8 @@ ipcMain.handle('menu:showTaskContext', (_event, taskId, taskTitle) => {
           const idx = tasks.findIndex(t => t.id === taskId);
           if (idx !== -1) {
             tasks.splice(idx, 1);
+             //saves updated task list to store
+  taskStore.set('tasks', tasks);
             pushTasksToRenderer();
           }
         }
@@ -415,6 +462,8 @@ ipcMain.handle('dialog:openFile', async () => {
     const clean = sanitizeTasks(parsed);
     tasks.splice(0, tasks.length, ...clean);
     nextId = Math.max(...tasks.map(t => t.id), 0) + 1;
+     //saves updated task list to store
+  taskStore.set('tasks', tasks);
     pushTasksToRenderer();
     return true;
   } catch (err) {
@@ -641,6 +690,8 @@ function buildMenu() {
               const clean = sanitizeTasks(parsed);
               tasks.splice(0, tasks.length, ...clean);
               nextId = Math.max(...tasks.map(t => t.id), 0) + 1;
+               //saves updated task list to store
+  taskStore.set('tasks', tasks);
               pushTasksToRenderer();
             } catch (err) {
               dialog.showMessageBox(mainWindow, {
@@ -746,6 +797,9 @@ async function markAllDone() {
       t.updatedAt = now;
     }
   });
+
+   //saves updated task list to store
+  taskStore.set('tasks', tasks);
   // Push the change to the renderer (this also updates the tray).
   pushTasksToRenderer();
 }
@@ -769,6 +823,8 @@ async function clearDoneTasks() {
   const remaining = tasks.filter(t => t.status !== 'Done');
   // Swap the array contents in place (same array object, new contents).
   tasks.splice(0, tasks.length, ...remaining);
+   //saves updated task list to store
+  taskStore.set('tasks', tasks);
   pushTasksToRenderer();
 }
 
